@@ -148,11 +148,19 @@ if ( !class_exists(BitBucketApi::class, false) ):
 		 * @return string
 		 */
 		protected function getDownloadUrl($ref) {
+			return $this->getDownloadBaseUrl() . $ref . '.zip';
+		}
+
+		/**
+		 * Get the base URL for ZIP downloads from our repo. Includes the trailing slash.
+		 *
+		 * @return string
+		 */
+		protected function getDownloadBaseUrl() {
 			return sprintf(
-				'https://bitbucket.org/%s/%s/get/%s.zip',
+				'https://bitbucket.org/%s/%s/get/',
 				$this->username,
-				$this->repository,
-				$ref
+				$this->repository
 			);
 		}
 
@@ -210,11 +218,7 @@ if ( !class_exists(BitBucketApi::class, false) ):
 				$url = $this->oauth->sign($url,'GET');
 			}
 
-			$options = array('timeout' => wp_doing_cron() ? 10 : 3);
-			if ( !empty($this->httpFilterName) ) {
-				$options = apply_filters($this->httpFilterName, $options);
-			}
-			$response = wp_remote_get($url, $options);
+			$response = wp_remote_get($url, $this->getApiRequestHttpOptions());
 			if ( is_wp_error($response) ) {
 				do_action('puc_api_error', $response, null, $url, $this->slug);
 				return $response;
@@ -255,6 +259,18 @@ if ( !class_exists(BitBucketApi::class, false) ):
 				);
 			} else {
 				$this->oauth = null;
+			}
+
+			if (
+				is_array($credentials)
+				&& !empty($credentials['username'])
+				&& !empty($credentials['api_token'])
+			) {
+				$this->enableBasicAuth(
+					$credentials['username'],
+					$credentials['api_token'],
+					$this->getDownloadBaseUrl()
+				);
 			}
 		}
 
