@@ -2,17 +2,11 @@
 
 namespace YahnisElsts\PluginUpdateChecker\v5p6\Vcs;
 
-use YahnisElsts\PluginUpdateChecker\v5p6\OAuthSignature;
 use YahnisElsts\PluginUpdateChecker\v5p6\Utils;
 
 if ( !class_exists(BitBucketApi::class, false) ):
 
 	class BitBucketApi extends Api {
-		/**
-		 * @var OAuthSignature
-		 */
-		private $oauth = null;
-
 		/**
 		 * @var string
 		 */
@@ -214,10 +208,6 @@ if ( !class_exists(BitBucketApi::class, false) ):
 			));
 			$baseUrl = $url;
 
-			if ( $this->oauth ) {
-				$url = $this->oauth->sign($url,'GET');
-			}
-
 			$response = wp_remote_get($url, $this->getApiRequestHttpOptions());
 			if ( is_wp_error($response) ) {
 				do_action('puc_api_error', $response, null, $url, $this->slug);
@@ -252,15 +242,6 @@ if ( !class_exists(BitBucketApi::class, false) ):
 		public function setAuthentication($credentials) {
 			parent::setAuthentication($credentials);
 
-			if ( !empty($credentials) && !empty($credentials['consumer_key']) ) {
-				$this->oauth = new OAuthSignature(
-					$credentials['consumer_key'],
-					$credentials['consumer_secret']
-				);
-			} else {
-				$this->oauth = null;
-			}
-
 			if (
 				is_array($credentials)
 				&& !empty($credentials['username'])
@@ -272,16 +253,6 @@ if ( !class_exists(BitBucketApi::class, false) ):
 					$this->getDownloadBaseUrl()
 				);
 			}
-		}
-
-		public function signDownloadUrl($url) {
-			//Add authentication data to download URLs. Since OAuth signatures incorporate
-			//timestamps, we have to do this immediately before inserting the update. Otherwise,
-			//authentication could fail due to a stale timestamp.
-			if ( $this->oauth ) {
-				$url = $this->oauth->sign($url);
-			}
-			return $url;
 		}
 	}
 
